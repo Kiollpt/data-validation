@@ -1,19 +1,11 @@
 from pprint import pprint
 from frictionless import Resource, Schema
 from frictionless import validate_resource
-
-# define schema
-custom_schema = {'fields': [{'name': 'ad_network', 'type': 'string'},
-                            {'name': 'date', 'type': 'date'},
-                            {'name': 'app_name', 'type': 'string'},
-                            {'name': 'unit_id', 'type': 'integer'},
-                            {'name': 'request', 'type': 'number'},
-                            {'name': 'revenue', 'type': 'number'},
-                            {'name': 'imp', 'type': 'number'}
-                            ]}
+from typing import List
 
 
-def redefine_report(report):
+def redefine_report(report: List[tuple], 
+                    custom_schema: dict) -> List[tuple]:
     schema = Schema(custom_schema)
     result = []
     for field_pos, code in report:
@@ -24,11 +16,23 @@ def redefine_report(report):
     return result
 
 
-def validation(msg: dict, spec=["fieldPosition", "code"]):
+def validation(msg: List[dict], custom_schema: dict,
+               spec=["fieldPosition", "code"]) -> List[tuple]:
+
     res = Resource(data=msg, schema=custom_schema)
     report = validate_resource(res, skip_errors=["#header"], spec=spec)
-    result = redefine_report(report.flatten(spec=spec))
-    pprint(result)
+    #print(report.flatten(spec=spec))
+    result = redefine_report(report.flatten(spec=spec), custom_schema)
+    #pprint(result)
+    return result
+
+
+def missing_keys(msg: List[dict], custom_schema: dict) -> bool:
+    keys = Schema(custom_schema).field_names
+    if all(col in keys for col in msg[0]):
+        return False
+    else:
+        return True
 
 
 def main():
@@ -39,10 +43,23 @@ def main():
         "unit_id": "55665201314",
         "request": "100",
         "revenue": "0.00365325",
-        "imp": 10
+        "imp": "bb"
     }]
 
-    validation(msg=d)
+    # define schema
+    custom_schema = {'fields': [{'name': 'ad_network', 'type': 'string'},
+                                {'name': 'date', 'type': 'date'},
+                                {'name': 'app_name', 'type': 'string'},
+                                {'name': 'unit_id', 'type': 'integer'},
+                                {'name': 'request', 'type': 'number'},
+                                {'name': 'revenue', 'type': 'number'},
+                                {'name': 'imp', 'type': 'number'}
+                                ]}
+
+    result = validation(d, custom_schema)
+    pprint(result)
+    print(missing_keys(d, custom_schema))
 
 
-main()
+if __name__ == "__main__":
+    main()
